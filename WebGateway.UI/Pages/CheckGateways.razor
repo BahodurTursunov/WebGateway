@@ -1,0 +1,314 @@
+﻿@page "/check_gateways"
+@using GatewayDTO.ResponseModel
+@using GatewayDTO.ResponseModel.EntityResponse
+@using System.Net.Http.Headers
+@using WebGateway.UI.Authentication
+@inject AuthenticationStateProvider _authenticationState
+@inject NavigationManager navigationManager
+@inject HttpClient _HttpClient;
+@inject IJSRuntime js
+@attribute [Authorize(Roles = "Admin,Client")]
+<h3>Терминал шлюзы</h3>
+<PageTitle>Терминал шлюзы</PageTitle>
+@if (_list != null)
+{
+    <div class="grid-container">
+        @foreach (var item in _list)
+        {
+            <div class="grid-item" style="align-content:center; background-color: @(item.Status == "1" ? "LimeGreen" : "orangeRed")">
+                <h3>@item.Name</h3>
+            </div>
+        }
+    </div>
+    <h2>Count: @_list.Count</h2>
+}
+<style>
+    .grid-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); /* Ensure items fit on the screen */
+        gap: 3px;
+        height: calc(100vh - 50px); /* Adjust for the count text */
+        box-sizing: border-box;
+    }
+
+    .grid-item {
+        font-size: 0.9rem;
+        height: 135px; /* Fixed height */
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+/* 
+    body{
+        overflow-y:hidden;
+    } */
+</style>
+@code {
+    [Inject]
+    private CustomAuthenticationStateProvider authenticationStateProvider { get; set; }
+    private string authToken;
+
+    private ConditionResponse? _response;
+
+    private HashSet<string> _uniqueIds = new();
+    private List<ConditionResponse>? _list = new();
+
+
+    private Dictionary<string, ConditionResponse> _responseDict = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            authToken = await authenticationStateProvider.GetToken();
+            if (!string.IsNullOrWhiteSpace(authToken))
+            {
+                await CallApisInParallel();
+                //await CallApisInParallelSecound();
+            }
+            else
+            {
+                navigationManager.NavigateTo("/login");
+            }
+        }
+        catch (Exception)
+        {
+
+            throw;
+        }
+    }
+    private async Task CallApisInParallel()
+    {
+        try
+        {
+            // var apiAddresses = new List<string>
+            // {                
+            //     "api/checkABS",
+            //     "api/Alif/BankCardRu",
+            //     "api/checkAlif",
+            //     "api/checkAmonatBonk",
+            //     "api/checkAnorMobile",
+            //     "api/checkAnt",
+            //     "api/checkArdo",
+            //     "api/Arvand/Wallet",
+            //     "api/checkArvand",
+
+            //     "api/checkAziziMoliya",
+            //     "api/BPC_Visa/SberBank",
+            //     "api/BPC_Visa/TCB",
+            //     "api/BPC_Visa/Tinkoff",
+            //     "api/BPC_Visa/TJS",
+            //     "api/BPC_Visa/VTB",
+            //     "api/BPC_Visa/ZP",
+            //     "api/checkBPC_Visa",
+            //     "api/checkBabilon",
+            //     "api/checkBarakatMoliya",
+            //     "api/checkBarakatTj",
+            //     "api/checkDcity",
+            //     "api/EskhataOnline/EskhataLeasing",
+            //     "api/EskhataOnline/Favri2EskhataOnline",
+            //     "api/checkEskhataOnline",
+            //     "api/checkExpressPay",
+            //     "api/checkFinka",
+            //     "api/checkFormulaUspekha",
+            //     "api/checkGosstandart",
+            //     "api/checkGumruk",
+            // };
+            var apiGroups = new List<List<string>>
+            {
+                new List<string>
+                {
+                   "api/checkABS",
+                "api/Alif/BankCardRu",
+                "api/checkAlif",
+                "api/checkAmonatBonk",
+                "api/checkAnorMobile",
+                "api/checkAnt",
+                "api/checkArdo",
+                "api/Arvand/Wallet",
+                "api/checkArvand",
+
+                "api/checkAziziMoliya",
+                "api/BPC_Visa/SberBank",
+                "api/BPC_Visa/TCB",
+                "api/BPC_Visa/Tinkoff",
+                "api/BPC_Visa/TJS",
+                "api/BPC_Visa/VTB",
+                "api/BPC_Visa/ZP",
+                "api/checkBPC_Visa",
+                "api/checkBabilon",
+                "api/checkBarakatMoliya",
+                "api/checkBarakatTj",
+                "api/checkDcity",
+                "api/EskhataOnline/EskhataLeasing",
+                "api/EskhataOnline/Favri2EskhataOnline",
+                "api/checkEskhataOnline",
+                "api/checkExpressPay",
+                "api/checkFinka",
+                "api/checkFormulaUspekha",
+                "api/checkGosstandart",
+                "api/checkGumruk",
+                },
+                new List<string>
+                {"api/checkHosil",
+                "api/checkHumo",
+                "api/checkImon",
+                "api/checkImonFond",
+                "api/checkMTC",
+                "api/MTM/SberBank",
+                "api/MTM/TinkoffBank",
+                "api/MTM/CheckCard",
+                "api/MTM/ZP",
+                "api/MTM/Woopay",
+                "api/MTM/TCB",
+                "api/checkMTM",
+                "api/checkMatin",
+                "api/checkMegafon",
+                "api/checkNavovarhoiM",
+                "api/checkOilaTV",
+                "api/checkOrienbank",
+                "api/checkOsonPay",
+                "api/PMBService/Card",
+                "api/PMBService/PMB",
+
+                "api/checkPMBService",
+                "api/checkPayvandGroupBank",
+                "api/checkSalomTaxi",
+                "api/checkSanoatSodirotBonk",
+                "api/checkShahriBekhatar",
+                "api/checkSmartPay",
+                "api/checkSonyia",
+                "api/checkTTLNGN",
+                "api/checkTajPay",
+                "api/checkTavhidbonk",
+                "api/checkTax",
+                "api/TaxiMaxim/Faberlic",
+                "api/TaxiMaxim/Telecom",
+                "api/checkTaxiMaxim",
+                "api/checkTcell",
+                "api/checkTechnoMoliya",
+                "api/checkTojturon",
+                "api/checkUzCard",
+                "api/checkVasl",
+                "api/checkZet_Mobile",
+                }
+            };
+
+            foreach (var apiGroup in apiGroups)
+            {
+                var tasks = apiGroup.Select(GetResponse).ToList();
+                await Task.WhenAll(tasks);
+            }
+
+            StateHasChanged();
+
+            // var tasks = apiAddresses.Select(apiUrl => GetResponse(apiUrl)).ToList();
+
+            // await Task.WhenAll(tasks);
+            // StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await js.InvokeVoidAsync("alert", "API сервера не работает!!!");
+        }
+    }
+    private async Task CallApisInParallelSecound()
+    {
+        try
+        {
+            var apiAddresses = new List<string>
+            {
+                "api/checkHosil",
+                "api/checkHumo",
+                "api/checkImon",
+                "api/checkImonFond",
+                "api/checkMTC",
+                "api/MTM/SberBank",
+                "api/MTM/TinkoffBank",
+                "api/MTM/CheckCard",
+                "api/MTM/ZP",
+                "api/MTM/Woopay",
+                "api/MTM/TCB",
+                "api/checkMTM",
+                "api/checkMatin",
+                "api/checkMegafon",
+                "api/checkNavovarhoiM",
+                "api/checkOilaTV",
+                "api/checkOrienbank",
+                "api/checkOsonPay",
+                "api/PMBService/Card",
+                "api/PMBService/PMB",
+
+                "api/checkPMBService",
+                "api/checkPayvandGroupBank",
+                "api/checkSalomTaxi",
+                "api/checkSanoatSodirotBonk",
+                "api/checkShahriBekhatar",
+                "api/checkSmartPay",
+                "api/checkSonyia",
+                "api/checkTTLNGN",
+                "api/checkTajPay",
+                "api/checkTavhidbonk",
+                "api/checkTax",
+                "api/TaxiMaxim/Faberlic",
+                "api/TaxiMaxim/Telecom",
+                "api/checkTaxiMaxim",
+                "api/checkTcell",
+                "api/checkTechnoMoliya",
+                "api/checkTojturon",
+                "api/checkUzCard",
+                "api/checkVasl",
+                "api/checkZet_Mobile",
+            };
+
+            var tasks = apiAddresses.Select(apiUrl => GetResponseSecound(apiUrl)).ToList();
+
+            await Task.WhenAll(tasks);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await js.InvokeVoidAsync("alert", "API сервера не работает!!!");
+        }
+    }
+    private async Task GetResponse(string endpoint)
+    {
+        try
+        {
+            _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            var response = await _HttpClient.GetFromJsonAsync<ConditionResponse>(endpoint);
+            if (response != null)
+            {
+                if (!_responseDict.ContainsKey(response.Name)) // Assuming 'Id' is the unique property
+                {
+                    _responseDict[response.Name] = response;
+                    _list.Add(_responseDict[response.Name]);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log or handle the exception as necessary
+        }
+    }
+
+    private async Task GetResponseSecound(string endpoint)
+    {
+        try
+        {
+            _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            var response = await _HttpClient.GetFromJsonAsync<ConditionResponse>(endpoint);
+            if (response != null)
+            {
+                if (!_responseDict.ContainsKey(response.Name)) // Assuming 'Id' is the unique property
+                {
+                    _responseDict[response.Name] = response;
+                    _list.Add(_responseDict[response.Name]);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log or handle the exception as necessary
+        }
+    }
+}

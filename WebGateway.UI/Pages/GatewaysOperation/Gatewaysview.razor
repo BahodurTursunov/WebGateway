@@ -1,0 +1,250 @@
+﻿@page "/editpage"
+@using GatewayDTO
+@using System.Text
+@using System.Net.Http.Headers
+@using WebGateway.UI.Authentication
+@inject AuthenticationStateProvider _authenticationState
+@inject NavigationManager navigationManager
+@inject HttpClient _HttpClient;
+@attribute [Authorize(Roles = "Admin")]
+@inject IJSRuntime js
+<div class="row">
+    <div class="col-9">
+        <h3>Шлюзы</h3>
+    </div>
+    <div class="col-3 text-right">
+        <div class="input-group col">
+            <input type="text" class="form-control" placeholder="Search client by last name or first name"
+                   @bind="SearchString" @bind:event="oninput" @onkeyup="FilterClients" />
+        </div>
+    </div>
+</div> 
+<br />
+
+@if(gatewayNames == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    foreach (var item in gatewayNames)
+    {
+        <EditForm Model="@item" OnValidSubmit="() => HandleValidSubmit(item)">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+            <div class="card mb-3">
+                <div class="card-body p-0">
+                    <table class="table m-0">
+                        <thead>
+                            <tr>
+                                <th style="vertical-align:middle; text-align:center; width: 10%">ID</th>
+                                <th style="vertical-align:middle; text-align:center; width: 20%">Имя шлюза</th>
+                                <th style="vertical-align:middle; text-align:center; width: 100%">Название поля и Имя значения</th>
+                                <th style="vertical-align:middle; text-align:center; width: 10%">Статус</th>
+                                <th style="vertical-align:middle; text-align:center; width: 15%">Изменить</th>
+                            </tr>
+                        </thead>
+                        <tbody style="border-style: none;">
+                            <tr>
+                                <td style="vertical-align:middle; text-align:center;"><b>@item.IdGateway</b></td>
+                                <td style="vertical-align:middle;">@item.Name</td>
+                                <td style="vertical-align:middle; text-align:center;">
+                                    <details class="btn btn-info text-white bg-info" style="width:100%">
+                                        <summary>Посмотреть детально</summary>
+                                        <div>
+                                            @if (gatewayValues != null)
+                                            {
+                                                foreach (var item2 in gatewayValues)
+                                                {
+                                                    if (item2.IdGateway == item.IdGateway)
+                                                    {
+                                                        <div style="padding: 0; margin-top: 5px;">
+                                                            <div class="row justify-content-center">
+                                                                <div class="col-4" style="display: flex; align-items: center;">
+                                                                    <span>@item2.Name</span>
+                                                                </div>
+                                                                <div class="col-8">
+                                                                    <InputText id="Value" style="width:100%;" class="form-control" @bind-Value="@item2.Value" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                }
+                                            }
+                                        </div>
+                                    </details>
+                                </td>
+                                <td style="vertical-align:middle; text-align:center; color: white">
+                                    <span class="badge" style="background-color: @(item.Status == 1 ? "green" : "red"); color: white">@(item.Status == 1 ? "Работает" : "Отключен")</span>
+                                </td>
+                                <td style="vertical-align:middle; text-align:center;">
+                                    <button type="submit" class="btn btn-primary mb-2" @onclick="()=>HandleValidSubmit(item)">
+                                        Редактировать
+                                    </button>
+                                    <button type="button" class="btn btn-warning" @onclick="()=>UpdateName(item)">
+                                        @(item.Status == 1 ? "Отключить" : "Включить")
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <br />
+        </EditForm>
+    }
+}
+
+@code {
+    [Inject]
+    private CustomAuthenticationStateProvider authenticationStateProvider { get; set; }
+    private string authToken;
+
+    protected string SearchString { get; set; } = string.Empty;
+
+    private List<GatewayNames>? gatewayNames;
+
+    private List<GatewayValues>? gatewayValues;
+
+    private List<GatewayNames>? searchName;
+
+    private List<GatewayValues>? searchListValue;
+
+    private bool checkMessage;
+
+    protected async override Task OnInitializedAsync()
+    {
+        await GetByValue();
+        await GetByName();
+        SearchString = string.Empty;
+        FilterClients();
+    }
+
+    protected async Task GetByName()
+    {
+        try
+        {
+            authToken = await authenticationStateProvider.GetToken();
+            if (authToken != null)
+            {
+                _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+                var response = await _HttpClient.GetFromJsonAsync<List<GatewayNames>>("Name");
+                gatewayNames = response;
+             
+            }
+        }
+        catch (Exception ex)
+        {
+            await js.InvokeVoidAsync("alert", "API сервера не работает!!!");
+        }
+    }
+
+    protected async Task GetByValue()
+    {
+        try
+        {
+            authToken = await authenticationStateProvider.GetToken();
+            if (authToken != null)
+            {
+                _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+                var response = await _HttpClient.GetFromJsonAsync<List<GatewayValues>>("Value");
+                gatewayValues = response;
+            }
+        }
+        catch (Exception ex)
+        {
+            await js.InvokeVoidAsync("alert", "API сервера не работает!!!");
+        }
+    }
+
+    public async Task UpdateName(GatewayNames item)
+    {
+        if (item != null)
+        {
+            item.Status = (item.Status == 1) ? item.Status = 0 : item.Status = 1; 
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(item);         
+            try
+            {
+                var stringContent = new StringContent(json, UnicodeEncoding.UTF8, "application/json");
+                var response =await _HttpClient.PutAsync($"changestatus", stringContent);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    checkMessage = true;
+                }
+                else
+                {
+                    checkMessage = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                await  js.InvokeVoidAsync("alert", "API сервера не работает!!!");
+            }
+        }
+        else
+        {
+            await js.InvokeVoidAsync("alert", "Маълумоти шумо ёфт нашуд");
+        }
+    }
+
+    protected async Task HandleValidSubmit(GatewayNames item)
+    {
+        if (gatewayValues != null)
+        {
+            foreach (var item2 in gatewayValues)
+            {
+                if (item2.IdGateway == item.IdGateway)
+                {
+                    try
+                    {
+                        var json = Newtonsoft.Json.JsonConvert.SerializeObject(item2);
+
+                        var stringContent = new StringContent(json, UnicodeEncoding.UTF8, "application/json");
+
+                        var response = await _HttpClient.PutAsync($"UpdateValues", stringContent);
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            checkMessage = true;
+                        }
+                        else
+                        {
+                            checkMessage = false;
+                        }   
+                    }
+                    catch (Exception)
+                    {
+
+                        throw;
+                    }
+                }
+            }
+        }
+
+    }
+    protected void FilterClients()
+    {
+        if (!string.IsNullOrEmpty(SearchString))
+        {
+            searchName = gatewayNames.Where(x => x.Name.Contains(SearchString)).ToList();
+      }
+        else
+        {
+            searchName = gatewayNames;
+            searchListValue = gatewayValues;
+        }
+    }
+   
+    private void ShowMessagesToView()
+    {
+        if (checkMessage == true)
+        {
+             js.InvokeVoidAsync("alert", "Маълумоти шумо муваффакият сабт шуд");
+        }
+        else
+        {
+            js.InvokeVoidAsync("alert", "Маълумоти шумо сабт нашуд");
+        }
+    }
+}

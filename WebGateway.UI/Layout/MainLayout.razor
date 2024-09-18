@@ -1,0 +1,39 @@
+﻿@using WebGateway.UI.Authentication
+@inherits LayoutComponentBase
+@inject AuthenticationStateProvider authStateProvider
+@inject NavigationManager navManger
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu/>
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <AuthorizeView>
+                <NotAuthorized>
+                    <a href="/login">Вход</a>
+                </NotAuthorized>
+                <Authorized>
+                    <a @onclick="Logout" href="javascript:void(0)">Выход</a>
+                    @*<a href="/logout">Logout</a>*@
+                </Authorized>
+            </AuthorizeView>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code
+{
+    private async Task Logout()
+    {
+        var customAuthStateProvider = (CustomAuthenticationStateProvider)authStateProvider;
+        await customAuthStateProvider.UpdateAuthenticationState(null);
+        navManger.NavigateTo("/",true);
+    }
+}
