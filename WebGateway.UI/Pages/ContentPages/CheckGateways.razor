@@ -1,0 +1,167 @@
+﻿@page "/check_gateways"
+
+@attribute [Authorize(Roles = "Admin,Client")]
+
+<PageTitle>Терминал шлюзы</PageTitle>
+
+<h3>Терминал шлюзы</h3>
+
+@if (_list != null)
+{
+    <MudPaper Height="400px" Width="100%">
+        <MudContainer Fixed="true">
+            <MudPaper Height="400px" Width="100%" Square="false" Class="mud-theme-primary">
+                <div class="card">
+                    @foreach (var item in _list)
+                    {
+                        <div class="grid-item @GetStatusColor(item.Status)">
+                            <h3>@item.Name</h3>
+                        </div>
+                    }
+                </div>
+                <h2>Count: @_list.Count</h2>
+            </MudPaper>
+        </MudContainer>
+    </MudPaper>
+}
+@code {
+    private string authToken;
+
+    private List<ConditionResponse> _list = new();
+
+    private ConcurrentDictionary<string, ConditionResponse> _responseDict = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await CheckAuthTokenAsync();
+            if (!string.IsNullOrWhiteSpace(authToken))
+            {
+                await CallApisInParallel();
+            }
+        }
+        catch (Exception)
+        {
+            // Обработка исключения
+        }
+    }
+
+    private async Task CheckAuthTokenAsync()
+    {
+        authToken = await _customAuthenticationStateProvider.GetToken();
+        if (string.IsNullOrWhiteSpace(authToken))
+        {
+            navigationManager.NavigateTo("/login");
+        }
+    }
+
+    private async Task CallApisInParallel()
+    {
+        try
+        {
+            var apiAddresses = new List<string>
+            {
+                "api/checkABS",
+                "api/Alif/BankCardRu",
+                "api/checkAlif",
+                "api/checkAmonatBonk",
+                "api/checkAnorMobile",
+                "api/checkAnt",
+                "api/checkArdo",
+                "api/Arvand/Wallet",
+                "api/checkArvand",
+                "api/checkAziziMoliya",
+                "api/BPC_Visa/SberBank",
+                "api/BPC_Visa/TCB",
+                "api/BPC_Visa/Tinkoff",
+                "api/BPC_Visa/TJS",
+                "api/BPC_Visa/VTB",
+                "api/BPC_Visa/ZP",
+                "api/checkBPC_Visa",
+                "api/checkBabilon",
+                "api/checkBarakatMoliya",
+                "api/checkBarakatTj",
+                "api/checkDcity",
+                "api/EskhataOnline/EskhataLeasing",
+                "api/EskhataOnline/Favri2EskhataOnline",
+                "api/checkEskhataOnline",
+                "api/checkExpressPay",
+                "api/checkFinka",
+                "api/checkFormulaUspekha",
+                "api/checkGosstandart",
+                "api/checkGumruk",
+                "api/checkHosil",
+                "api/checkHumo",
+                "api/checkImon",
+                "api/checkImonFond",
+                "api/checkMTC",
+                "api/MTM/SberBank",
+                "api/MTM/TinkoffBank",
+                "api/MTM/CheckCard",
+                "api/MTM/ZP",
+                "api/MTM/Woopay",
+                "api/MTM/TCB",
+                "api/checkMTM",
+                "api/checkMatin",
+                "api/checkMegafon",
+                "api/checkNavovarhoiM",
+                "api/checkOilaTV",
+                "api/checkOrienbank",
+                "api/checkOsonPay",
+                "api/PMBService/Card",
+                "api/PMBService/PMB",
+                "api/checkPMBService",
+                "api/checkPayvandGroupBank",
+                "api/checkSalomTaxi",
+                "api/checkSanoatSodirotBonk",
+                "api/checkShahriBekhatar",
+                "api/checkSmartPay",
+                "api/checkSonyia",
+                "api/checkTTLNGN",
+                "api/checkTajPay",
+                "api/checkTavhidbonk",
+                "api/checkTax",
+                "api/TaxiMaxim/Faberlic",
+                "api/TaxiMaxim/Telecom",
+                "api/checkTaxiMaxim",
+                "api/checkTcell",
+                "api/checkTechnoMoliya",
+                "api/checkTojturon",
+                "api/checkUzCard",
+                "api/checkVasl",
+                "api/checkZet_Mobile",
+            };
+
+            var tasks = apiAddresses.Select(GetResponse).ToList();
+            await Task.WhenAll(tasks);
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            await js.InvokeVoidAsync("alert", "API сервера не работает!!!");
+        }
+    }
+
+    private async Task GetResponse(string endpoint)
+    {
+        try
+        {
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+            var response = await _httpClient.GetFromJsonAsync<ConditionResponse>(endpoint);
+            if (response != null && _responseDict.TryAdd(response.Name, response))
+            {
+                _list.Add(response);
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private string GetStatusColor(string status)
+    {
+        return status == "1" ? "bg-success" : "bg-danger";
+    }
+}

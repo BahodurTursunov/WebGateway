@@ -1,8 +1,8 @@
-﻿@using WebGateway.UI.Authentication
-@inherits LayoutComponentBase
-@inject AuthenticationStateProvider authStateProvider
-@inject NavigationManager navManger
-
+﻿@inherits LayoutComponentBase
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 <div class="page">
     <div class="sidebar">
         <NavMenu/>
@@ -34,6 +34,6 @@
     {
         var customAuthStateProvider = (CustomAuthenticationStateProvider)authStateProvider;
         await customAuthStateProvider.UpdateAuthenticationState(null);
-        navManger.NavigateTo("/",true);
+        navigationManager.NavigateTo("/",true);
     }
 }

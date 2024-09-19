@@ -10,3 +10,19 @@
 @using WebGateway.UI.Layout
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
+@using GatewayDTO.ResponseModel
+@using GatewayDTO.ResponseModel.EntityResponse
+@using System.Net.Http.Headers
+@using WebGateway.UI.Authentication
+@using MudBlazor
+@using GatewayDTO.User
+@using System.Collections.Concurrent
+@using System.Net
+
+@inject HttpClient _httpClient
+@inject AuthenticationStateProvider authStateProvider
+@inject NavigationManager navigationManager
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject CustomAuthenticationStateProvider _customAuthenticationStateProvider
+@inject NavigationManager navigationManager
+@inject IJSRuntime js
