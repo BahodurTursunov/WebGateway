@@ -97,8 +97,8 @@ else
 
 @code {
     [Inject]
-    private CustomAuthenticationStateProvider authenticationStateProvider { get; set; }
-    private string authToken;
+    private CustomAuthenticationStateProvider authenticationStateProvider { get; set; } =null!;
+    private string? authToken;
 
     protected string SearchString { get; set; } = string.Empty;
 
@@ -133,7 +133,7 @@ else
              
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             await js.InvokeVoidAsync("alert", "API сервера не работает!!!");
         }
@@ -151,7 +151,7 @@ else
                 gatewayValues = response;
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             await js.InvokeVoidAsync("alert", "API сервера не работает!!!");
         }
@@ -177,7 +177,7 @@ else
                     checkMessage = false;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 await  js.InvokeVoidAsync("alert", "API сервера не работает!!!");
             }
@@ -227,7 +227,7 @@ else
     {
         if (!string.IsNullOrEmpty(SearchString))
         {
-            searchName = gatewayNames.Where(x => x.Name.Contains(SearchString)).ToList();
+            searchName = gatewayNames!.Where(x => x.Name!.Contains(SearchString)).ToList();
       }
         else
         {

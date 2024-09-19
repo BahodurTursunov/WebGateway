@@ -1,10 +1,6 @@
-﻿@page "/check-gateways"
+@page "/inactive-gateways"
 
-
-@attribute [Authorize(Roles = "Admin,Client")]
-
-<PageTitle>Терминал шлюзы</PageTitle>
-<h3>Все Шлюзы</h3>
+<h3>Неактивные Шлюзы</h3>
 <ul class="nav nav-tabs">
     <li class="nav-item">
         <a class="nav-link" href="/check-gateways">Все шлюзы</a>
@@ -17,12 +13,11 @@
     </li>
 </ul>
 
-
 @if (_list != null)
 {
     <div class="container">
         <div class="row g-2">
-            @foreach (var item in _list)
+            @foreach (var item in _list.Where(g => g.Status == "0" || g.Status == "2"))
             {
                 <div class="col-3">
                     <div class="card fixed-card-size @GetStatusCardClass(item.Status)">
@@ -30,16 +25,15 @@
                             <h5>@item.Name</h5>
                             <p class="card-text text-muted"></p>
                         </div>
-                       <div class="card-footer d-flex align-items-center @GetStatusFooterClass(item.Status)" style="color: white; text-align: left;">
-    <span class="badge @GetStatusBadgeClass(item.Status)"></span>
-    <p class="mb-0">@GetStatusText(item.Status)</p>
-</div>
-
+                        <div class="card-footer d-flex align-items-center @GetStatusFooterClass(item.Status)" style="color: white; text-align: left;">
+                            <span class="badge @GetStatusBadgeClass(item.Status)"></span>
+                            <p class="mb-0">@GetStatusText(item.Status)</p>
+                        </div>
                     </div>
                 </div>
             }
         </div>
-        <p class="mt-4">Total Gateways: @_list.Count</p>
+        <p class="mt-4">Total Inactive Gateways: @_list.Count(g => g.Status == "0" || g.Status == "2")</p>
     </div>
 }
 else if (_isLoading)
@@ -90,7 +84,8 @@ else
             navigationManager.NavigateTo("/login");
         }
     }
-    private async Task CallApisInParallel()
+
+   private async Task CallApisInParallel()
     {
         try
         {
@@ -186,6 +181,7 @@ else
             await js.InvokeVoidAsync("alert", "API сервера не работает!!!");
         }
     }
+
     private async Task GetResponse(string endpoint)
     {
         try
@@ -194,59 +190,45 @@ else
             var response = await _httpClient.GetFromJsonAsync<ConditionResponse>(endpoint);
             if (response != null)
             {
-                if (!_responseDict.ContainsKey(response.Name)) // Assuming 'Id' is the unique property
+                if (!_responseDict.ContainsKey(response.Name))
                 {
                     _responseDict[response.Name] = response;
                     _list.Add(_responseDict[response.Name]);
                 }
             }
         }
-        catch{}
+        catch { }
     }
 
-    private string GetStatusCardClass(string status)
+    private string GetStatusCardClass(string status) => status switch
     {
-        // return status == "1" ? "bg-success" : "bg-error";
-        if (status == "1")
-            return "success";
-        else if (status == "0")
-            return "error";
-        else if (status == "2")
-            return "warning";
-        return status;
-    }
+        "1" => "bg-success",
+        "0" => "bg-danger",
+        "2" => "bg-warning",
+        _ => "bg-secondary",
+    };
 
-    private string GetStatusBadgeClass(string status)
+    private string GetStatusBadgeClass(string status) => status switch
     {
-        // return status == "1" ? "badge-success" : "badge-error";
-        if (status == "1")
-            return "bg-success";
-        else if (status == "0")
-            return "bg-error";
-        else if (status == "2")
-            return "bg-dangerous";
-        return status;
-    }
+        "1" => "bg-success",
+        "0" => "bg-danger",
+        "2" => "bg-warning",
+        _ => "bg-secondary",
+    };
 
-    private string GetStatusText(string status)
+    private string GetStatusText(string status) => status switch
     {
-        @* return status == "1" ? "Active" : "Inactive"; *@
-        if (status == "1") return "Active";
-        else if (status == "2") return "Inactive";
-        else if (status == "0") return "Inactive";
-        return status;
-    }
-    private string GetStatusFooterClass(string status)
-    {
-        if (status == "1")
-            return "bg-success"; // Зеленая карточка
-        else if (status == "0")
-            return "bg-danger"; // Красная карточка
-        else if (status == "2")
-            return "bg-warning"; // Желтая карточка
-        else
-            return "bg-danger"; 
-        //return "bg-secondary"; // Серая карточка по умолчанию
-    }
+        "1" => "Active",
+        "0" => "Inactive",
+        "2" => "Inactive",
+        _ => "Unknown",
+    };
 
+    private string GetStatusFooterClass(string status) => status switch
+    {
+        "1" => "bg-success",
+        "0" => "bg-danger",
+        "2" => "bg-warning",
+        _ => "bg-secondary",
+    };
 }
